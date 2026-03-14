@@ -69,7 +69,7 @@ generateBtn.addEventListener('click', async () => {
         btnLink.href = affiliateLink;
         resultBox.classList.add('active');
     } catch (error) {
-        alert("Failed to generate link. If this persists, it could be a CORS issue or invalid credentials.\n\nError: " + error.message);
+        alert("Không thể tạo liên kết. Nếu lỗi vẫn tiếp diễn, có thể do sự cố CORS hoặc thông tin xác thực không hợp lệ.\n\nLỗi: " + error.message);
     } finally {
         // Reset loading state
         btnText.style.display = 'block';
@@ -90,7 +90,7 @@ copyIcon.addEventListener('click', () => {
         }, 2000);
     }).catch(err => {
         console.error('Failed to copy: ', err);
-        alert("Failed to copy text to clipboard.");
+        alert("Không thể sao chép văn bản vào khay nhớ tạm.");
     });
 });
 
@@ -101,3 +101,19 @@ shopeeUrlInput.addEventListener('keypress', (e) => {
         generateBtn.click();
     }
 });
+
+const pasteBtn = document.getElementById('pasteBtn');
+if (pasteBtn) {
+    pasteBtn.addEventListener('click', async () => {
+        try {
+            const text = await navigator.clipboard.readText();
+            shopeeUrlInput.value = text;
+            
+            // Optionally, trigger the generation immediately after pasting
+            // generateBtn.click(); 
+        } catch (err) {
+            console.error('Failed to read clipboard contents: ', err);
+            alert("Không thể đọc từ khay nhớ tạm. Vui lòng kiểm tra quyền truy cập của trình duyệt.");
+        }
+    });
+}
