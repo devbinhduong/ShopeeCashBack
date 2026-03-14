@@ -20,7 +20,7 @@ function isValidShopeeUrl(url) {
 }
 
 async function createAffiliateLink(url) {
-    const apiEndpoint = '/api/generate-link'; // Uses our new secure backend
+    const apiEndpoint = 'https://shopeecashback.onrender.com/api/generate-link';
     
     try {
         const response = await fetch(apiEndpoint, {
