@@ -14,20 +14,23 @@
         <p>Chuyển đổi bất kỳ liên kết sản phẩm Shopee nào thành liên kết hoàn tiền cá nhân của bạn ngay lập tức.</p>
 
         <div class="input-group">
-            <label for="shopeeUrl">Liên kết Sản phẩm Shopee</label>
+            <label for="shopeeUrl">Link Sản phẩm Shopee</label>
             <div class="input-with-button">
                 <input type="url" id="shopeeUrl" placeholder="VD: https://shopee.vn/ten-san-pham-i.123456.7890" autocomplete="off">
+                <button type="button" class="clear-btn hidden" id="clearBtn" aria-label="Xóa">
+                    <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                </button>
                 <button type="button" class="paste-btn" id="pasteBtn">Dán</button>
             </div>
-            <div id="errorMsg" class="error-message">Vui lòng nhập liên kết Shopee hợp lệ.</div>
+            <div id="errorMsg" class="error-message">Vui lòng nhập Link Shopee hợp lệ.</div>
             <button id="generateBtn">
-                <span id="btnText">Tạo Liên kết Hoàn Tiền</span>
+                <span id="btnText">Tạo Link Hoàn Tiền</span>
                 <div id="loader" class="loader"></div>
             </button>
         </div>
 
         <div id="resultBox" class="result-box">
-            <div class="result-title">Liên kết Hoàn Tiền của Bạn</div>
+            <div class="result-title">Link Hoàn Tiền của Bạn</div>
             <div class="result-group">
               <div class="result-link" id="resultLink">https://go.accesstrade.vn/...</div>
               <a href="#" class="result-copy-icon" id="copyIcon">
@@ -48,7 +51,7 @@
                 <span class="copy-floating-text">Đã sao chép!</span>
               </a>
             </div>
-            <a href="#" class="button" target="_blank" id="productLink">Đến sản phẩm</a>
+            <a href="#" class="button" target="_blank" id="productLink">Mở sản phẩm</a>
         </div>
     </div>
 

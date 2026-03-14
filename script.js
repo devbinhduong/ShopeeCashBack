@@ -103,11 +103,34 @@ shopeeUrlInput.addEventListener('keypress', (e) => {
 });
 
 const pasteBtn = document.getElementById('pasteBtn');
+const clearBtn = document.getElementById('clearBtn');
+
+// Toggle clear button and paste button based on input value
+shopeeUrlInput.addEventListener('input', () => {
+    if (shopeeUrlInput.value.length > 0) {
+        if (clearBtn) clearBtn.classList.remove('hidden');
+        if (pasteBtn) pasteBtn.style.display = 'none';
+    } else {
+        if (clearBtn) clearBtn.classList.add('hidden');
+        if (pasteBtn) pasteBtn.style.display = 'block';
+    }
+});
+
+// Clear button action
+if (clearBtn) {
+    clearBtn.addEventListener('click', () => {
+        shopeeUrlInput.value = '';
+        shopeeUrlInput.dispatchEvent(new Event('input')); // Trigger input event to toggle buttons
+        shopeeUrlInput.focus();
+    });
+}
+
 if (pasteBtn) {
     pasteBtn.addEventListener('click', async () => {
         try {
             const text = await navigator.clipboard.readText();
             shopeeUrlInput.value = text;
+            shopeeUrlInput.dispatchEvent(new Event('input')); // Trigger input event to toggle buttons
             
             // Optionally, trigger the generation immediately after pasting
             // generateBtn.click(); 
