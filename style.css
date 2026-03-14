@@ -60,7 +60,7 @@ p {
 }
 
 .hidden {
-    display: none;
+    display: none !important;
 }
 
 label {
@@ -92,7 +92,7 @@ input:focus {
 
 .clear-btn {
     position: absolute;
-    right: 70px;
+    right: 15px;
     top: 50%;
     transform: translateY(-50%);
     background: none;
@@ -105,15 +105,13 @@ input:focus {
     justify-content: center;
     transition: color 0.2s, transform 0.2s;
     border-radius: 50%;
+    width: 40px;
+    height: 40px;
 }
 
 .clear-btn:hover {
     color: var(--error);
     background-color: rgba(220, 53, 69, 0.1);
-}
-
-.clear-btn:active {
-    transform: translateY(-50%) scale(0.9);
 }
 
 .paste-btn {
@@ -180,8 +178,8 @@ button {
     text-decoration: none;
 }
 
-.button:hover,
-button:hover {
+.button:not(.action-btn):hover,
+button:not(.action-btn):hover {
     background-color: var(--primary-hover);
     transform: translateY(-1px);
     box-shadow: 0 4px 12px rgba(238, 77, 45, 0.2);
