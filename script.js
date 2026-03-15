@@ -13,7 +13,7 @@ const loader = document.getElementById('loader');
 function isValidShopeeUrl(url) {
     try {
         const parsedUrl = new URL(url);
-        return parsedUrl.hostname.includes('shopee') || parsedUrl.hostname.includes('shope.ee');
+        return parsedUrl.hostname.includes('shopee') || parsedUrl.hostname.includes('shope.ee') || parsedUrl.hostname.includes('shp.ee');
     } catch (e) {
         return false;
     }
