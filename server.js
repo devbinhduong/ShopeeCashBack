@@ -79,6 +79,10 @@ app.post('/api/generate-link', async (req, res) => {
 
         const data = await response.json();
         
+        if (data.status === false || data.status === 0) {
+            return res.status(400).json({ error: data.message || 'AccessTrade API Error: Invalid Link or Not in Campaign' });
+        }
+
         let affiliateLink = null;
         
         if (data.data && data.data.success_link && Array.isArray(data.data.success_link) && data.data.success_link.length > 0) {
@@ -87,6 +91,12 @@ app.post('/api/generate-link', async (req, res) => {
         } else if (data.data && Array.isArray(data.data) && data.data.length > 0) {
             const linkObj = data.data[0];
             affiliateLink = linkObj.short_link || linkObj.product_link || linkObj.url;
+        } else if (data.data && data.data.short_link) {
+            affiliateLink = data.data.short_link;
+        } else if (data.data && data.data.product_link) {
+            affiliateLink = data.data.product_link;
+        } else if (data.data && data.data.url) {
+            affiliateLink = data.data.url;
         } else if (data.short_link) {
             affiliateLink = data.short_link;
         } else if (data.product_link) {
@@ -100,7 +110,8 @@ app.post('/api/generate-link', async (req, res) => {
         if (affiliateLink) {
             res.json({ link: affiliateLink });
         } else {
-            res.status(500).json({ error: 'Could not find the generated link in the API response.' });
+            console.error("Unrecognized AT payload:", data);
+            res.status(500).json({ error: 'Could not parse the generated link. AT Response: ' + JSON.stringify(data) });
         }
     } catch (error) {
         console.error("Link generation failed:", error);
