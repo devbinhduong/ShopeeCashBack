@@ -360,9 +360,9 @@ class ShopeeLinkGenerator {
         if (!this.productsContainer) return;
 
         try {
-            const response = await fetch('data_affiliate.json?' + new Date().getTime());
+            const response = await fetch('products_data.json?' + new Date().getTime());
             if (!response.ok) {
-                console.info('No product data found to render yet (data_affiliate.json not found).');
+                console.info('No product data found to render yet (products_data.json not found).');
                 return;
             }
             
