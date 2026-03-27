@@ -55,6 +55,44 @@
         </div>
     </div>
 
+    <!-- Scraped Products Section -->
+    <div class="scraped-deals-section">
+        <div class="deals-header">
+            <h2 id="dealsTitle">🔥 Siêu Ưu Đãi Hôm Nay</h2>
+            <div id="timeStatusContainer" class="time-status-container hidden">
+                <div class="time-badge">
+                    <span id="timeDate" class="time-date"></span>
+                    <span id="timeFrame" class="time-frame"></span>
+                    <span id="timeState" class="time-state"></span>
+                </div>
+                <div id="countdownBox" class="countdown-box hidden">
+                    <span class="countdown-label">Kết thúc sau:</span>
+                    <span id="countdownTimer" class="countdown-timer">00:00:00</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="deals-controls">
+            <div class="search-container">
+                <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                <input type="text" id="searchInput" placeholder="Tìm kiếm sản phẩm...">
+            </div>
+            <div class="filter-container">
+                <select id="sortSelect" class="sort-select">
+                    <option value="default">Sắp xếp mặc định</option>
+                    <option value="price-asc">Giá: Thấp đến Cao</option>
+                    <option value="price-desc">Giá: Cao đến Thấp</option>
+                    <option value="name-asc">Tên: A - Z</option>
+                    <option value="name-desc">Tên: Z - A</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="products-container" id="productsContainer">
+            <!-- Product cards will be loaded here dynamically -->
+        </div>
+    </div>
+
     <script src="script.js"></script>
 </body>
 </html>
