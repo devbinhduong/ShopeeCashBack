@@ -14,15 +14,15 @@
         <p>Nhập link sản phẩm Shopee để tạo link hoàn tiền và nhiều ưu đãi khác.</p>
 
         <div class="input-group">
-            <label for="shopeeUrl">Link Sản phẩm Shopee</label>
+            <label for="shopeeUrl">Link Sản phẩm Shopee hoặc TikTok</label>
             <div class="input-with-button">
-                <input type="url" id="shopeeUrl" placeholder="VD: https://shopee.vn/ten-san-pham-i.123456.7890" autocomplete="off">
+                <input type="url" id="shopeeUrl" placeholder="VD: https://shopee.vn/... hoặc https://vt.tiktok.com/..." autocomplete="off">
                 <button type="button" class="clear-btn hidden action-btn" id="clearBtn" aria-label="Xóa">
                     <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
                 </button>
                 <button type="button" class="paste-btn action-btn" id="pasteBtn">Dán</button>
             </div>
-            <div id="errorMsg" class="error-message">Vui lòng nhập Link Shopee hợp lệ.</div>
+            <div id="errorMsg" class="error-message">Vui lòng nhập link Shopee hoặc TikTok hợp lệ (shopee.vn, shp.ee, tiktok.com, vt.tiktok.com)</div>
             <button id="generateBtn">
                 <span id="btnText">Tạo Link Hoàn Tiền</span>
                 <div id="loader" class="loader"></div>

@@ -59,12 +59,15 @@ class ShopeeLinkGenerator {
         }
     }
 
-    isValidShopeeUrl(url) {
+    isValidProductUrl(url) {
         try {
             const parsedUrl = new URL(url);
             return parsedUrl.hostname.includes('shopee') || 
                    parsedUrl.hostname.includes('shope.ee') || 
-                   parsedUrl.hostname.includes('shp.ee');
+                   parsedUrl.hostname.includes('shp.ee') ||
+                   parsedUrl.hostname.includes('tiktok.com') ||
+                   parsedUrl.hostname.includes('vt.tiktok.com') ||
+                   parsedUrl.hostname.includes('v.tiktok.com');
         } catch (e) {
             return false;
         }
@@ -113,7 +116,7 @@ class ShopeeLinkGenerator {
         const url = this.shopeeUrlInput.value.trim();
         
         // Client-side validation
-        if (!url || !this.isValidShopeeUrl(url)) {
+        if (!url || !this.isValidProductUrl(url)) {
             this.errorMsg.classList.add('active');
             return;
         }

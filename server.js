@@ -47,7 +47,19 @@ app.post('/api/generate-link', async (req, res) => {
         console.warn("Could not pre-process URL, using original:", e.message);
     }
 
-    const apiEndpoint = 'https://api.accesstrade.vn/v1/product_link/create';
+    let apiEndpoint = 'https://api.accesstrade.vn/v1/product_link/create';
+    let bodyData = {
+        campaign_id: process.env.CAMPAIGN_ID,
+        urls: [cleanLink]
+    };
+    
+    if (cleanLink.includes('tiktok.com')) {
+        apiEndpoint = 'https://api.accesstrade.vn/v2/tiktokshop_product_feeds/create_link';
+        bodyData = {
+            product_url: cleanLink
+            // AccessTrade TikTok API v2 doesn't require campaign_id in body for feeds link
+        };
+    }
     
     try {
         // We use native fetch available in Node.js 18+
@@ -57,10 +69,7 @@ app.post('/api/generate-link', async (req, res) => {
                 'Content-Type': 'application/json',
                 'Authorization': `Token ${process.env.ACCESS_KEY}`
             },
-            body: JSON.stringify({
-                campaign_id: process.env.CAMPAIGN_ID,
-                urls: [cleanLink]
-            })
+            body: JSON.stringify(bodyData)
         });
 
         if (!response.ok) {
