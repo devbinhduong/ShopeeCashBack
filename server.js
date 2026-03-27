@@ -17,6 +17,36 @@ app.post('/api/generate-link', async (req, res) => {
         return res.status(400).json({ error: 'URL is required' });
     }
 
+    let cleanLink = url;
+    
+    try {
+        // Simple User-Agent to prevent 403 on redirects
+        const headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+        };
+
+        // 1. Expand the URL to follow redirects (e.g., shp.ee -> shopee.vn)
+        const expandRes = await fetch(url, { method: 'GET', redirect: 'follow', headers });
+        const finalUrl = expandRes.url;
+        
+        // 2. Clean URL to just domain and base path or product ids
+        const urlObj = new URL(finalUrl);
+        const regex1 = /-i\.(\d+)\.(\d+)/;
+        const regex2 = /\/product\/(\d+)\/(\d+)/;
+        
+        if (finalUrl.match(regex1)) {
+            const [, shopId, itemId] = finalUrl.match(regex1);
+            cleanLink = `https://shopee.vn/product/${shopId}/${itemId}`;
+        } else if (finalUrl.match(regex2)) {
+            const [, shopId, itemId] = finalUrl.match(regex2);
+            cleanLink = `https://shopee.vn/product/${shopId}/${itemId}`;
+        } else {
+            cleanLink = urlObj.origin + urlObj.pathname;
+        }
+    } catch (e) {
+        console.warn("Could not pre-process URL, using original:", e.message);
+    }
+
     const apiEndpoint = 'https://api.accesstrade.vn/v1/product_link/create';
     
     try {
@@ -29,7 +59,7 @@ app.post('/api/generate-link', async (req, res) => {
             },
             body: JSON.stringify({
                 campaign_id: process.env.CAMPAIGN_ID,
-                urls: [url]
+                urls: [cleanLink]
             })
         });
 
