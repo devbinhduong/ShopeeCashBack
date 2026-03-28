@@ -253,6 +253,8 @@ class ShopeeLinkGenerator {
             // Countdown logic if it's currently active or upcoming
             const frameMatch = frameStr.match(/\d{1,2}:\d{2}/);
             const isEnded = stateStr.toLowerCase().includes('kết thúc');
+            const isUpcoming = stateStr.toLowerCase().includes('sắp diễn ra');
+            const countdownLabel = document.getElementById('countdownLabel');
 
             if (frameMatch && !isEnded) {
                 // Determine target time
@@ -263,12 +265,23 @@ class ShopeeLinkGenerator {
                 let targetDate = new Date();
                 targetDate.setHours(hours, minutes, 0, 0);
 
-                // If target time is already past but state is not "kết thúc", maybe it spans a few hours. Let's just create a generic +2 hours countdown for demo if needed, or point to the end of the frame.
-                // Assuming frame lasts 2 hours normally
-                targetDate.setHours(targetDate.getHours() + 2);
-
-                if (targetDate > new Date()) {
-                    this.startCountdown(targetDate);
+                if (isUpcoming) {
+                    if (countdownLabel) countdownLabel.textContent = "Bắt đầu sau: ";
+                    if (targetDate > new Date()) {
+                        this.startCountdown(targetDate);
+                    } else {
+                        // In case time already passed but status is still 'Sắp diễn ra'
+                        this.stopCountdown();
+                    }
+                } else {
+                    if (countdownLabel) countdownLabel.textContent = "Kết thúc sau: ";
+                    // If it is 'Đang diễn ra', assume it lasts for 2 hours from the frame start
+                    targetDate.setHours(targetDate.getHours() + 2);
+                    if (targetDate > new Date()) {
+                        this.startCountdown(targetDate);
+                    } else {
+                        this.stopCountdown();
+                    }
                 }
             } else {
                 this.stopCountdown();
