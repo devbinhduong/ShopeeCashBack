@@ -2,6 +2,7 @@ class ShopeeLinkGenerator {
     constructor() {
         this.allProducts = [];
         this.countdownInterval = null;
+        this.salePhaseTimeout = null;
         this.initializeElements();
         if (this.validateElements()) {
             this.bindEvents();
@@ -223,57 +224,107 @@ class ShopeeLinkGenerator {
         this.renderProducts(filtered);
     }
 
+    parseSaleStart(dateStr, timeStr) {
+        const dm = dateStr.split('-').map((s) => parseInt(s.trim(), 10));
+        if (dm.length < 2 || dm.some((n) => Number.isNaN(n))) return null;
+        const [day, month] = dm;
+        const hm = (timeStr || '').split(':').map((s) => parseInt(s.trim(), 10));
+        const hour = Number.isFinite(hm[0]) ? hm[0] : 0;
+        const minute = Number.isFinite(hm[1]) ? hm[1] : 0;
+        const y = new Date().getFullYear();
+        return new Date(y, month - 1, day, hour, minute, 0, 0);
+    }
+
     setupTimeDisplay(timeStr) {
         if (!timeStr || timeStr === "Unknown Time") return;
 
-        const parts = timeStr.split('|').map(p => p.trim());
-        if (parts.length >= 2) {
-            const dateStr = parts[0]; // e.g., "28-03"
-            const frameStr = parts[1]; // e.g., "Khung: 15:00"
-            const stateStr = parts[2] || ''; // e.g., "Sắp diễn ra"
-
-            const container = document.getElementById('timeStatusContainer');
-            if (container) container.classList.remove('hidden');
-
-            const dateEl = document.getElementById('timeDate');
-            const frameEl = document.getElementById('timeFrame');
-            this.stateEl = document.getElementById('timeState');
-
-            if (dateEl) dateEl.textContent = dateStr;
-            if (frameEl) frameEl.textContent = frameStr;
-
-            // Parse the frame time (e.g. "Khung: 15:00" → 15:00)
-            const frameMatch = frameStr.match(/(\d{1,2}):(\d{2})/);
-            if (!frameMatch) return;
-
-            const [, hh, mm] = frameMatch;
-            let targetDate = new Date();
-            targetDate.setHours(Number(hh), Number(mm), 0, 0);
-
-            const isUpcoming = stateStr.toLowerCase().includes('sắp diễn ra');
-            const isActive = stateStr.toLowerCase().includes('đang diễn ra');
-            const isEnded = stateStr.toLowerCase().includes('kết thúc');
-
-            if (isEnded) {
-                this.setSaleState('ended');
-            } else if (isActive) {
-                this.setSaleState('active');
-                // Schedule end after 3 min from now (already started)
-                this.scheduleSaleEnd(3 * 60 * 1000);
-            } else if (isUpcoming && targetDate > new Date()) {
-                // Countdown to start time
-                this.setSaleState('upcoming');
-                this.startCountdown(targetDate, () => {
-                    // When countdown hits 0 → go active
-                    this.setSaleState('active');
-                    // After 3 minutes → end sale
-                    this.scheduleSaleEnd(3 * 60 * 1000);
-                });
-            } else {
-                // Time already passed, default to ended
-                this.setSaleState('ended');
-            }
+        if (this.salePhaseTimeout) {
+            clearTimeout(this.salePhaseTimeout);
+            this.salePhaseTimeout = null;
         }
+        this.stopCountdown();
+
+        const parts = timeStr.split(/\s+/).map((p) => p.trim());
+        if (parts.length < 3) return;
+
+        const dateStr = parts[0];
+        const frameStr = `${parts[1]} ${parts[2]}`;
+        const timeStrPart = parts[2];
+
+        const saleStart = this.parseSaleStart(dateStr, timeStrPart);
+        if (!saleStart || Number.isNaN(saleStart.getTime())) return;
+
+        const saleEnd = new Date(saleStart.getTime() + 5 * 60 * 1000);
+        const now = new Date();
+
+        const container = document.getElementById('timeStatusContainer');
+        if (container) container.classList.remove('hidden');
+
+        const dateEl = document.getElementById('timeDate');
+        const frameEl = document.getElementById('timeFrame');
+        const stateEl = document.getElementById('timeState');
+        const countdownLabel = document.getElementById('countdownLabel');
+        const countdownBox = document.getElementById('countdownBox');
+
+        if (dateEl) dateEl.textContent = dateStr;
+        if (frameEl) frameEl.textContent = frameStr;
+
+        const setUpcomingUi = () => {
+            if (stateEl) {
+                stateEl.textContent = 'Sắp diễn ra';
+                stateEl.className = 'time-state';
+            }
+            if (countdownLabel) countdownLabel.textContent = 'Bắt đầu sau:';
+            if (countdownBox) countdownBox.classList.remove('hidden');
+        };
+
+        const setActiveUi = () => {
+            if (stateEl) {
+                stateEl.textContent = 'Đang diễn ra';
+                stateEl.className = 'time-state active';
+            }
+            if (countdownBox) countdownBox.classList.add('hidden');
+        };
+
+        const setEndedUi = () => {
+            if (stateEl) {
+                stateEl.textContent = 'Đã kết thúc';
+                stateEl.className = 'time-state ended';
+            }
+            if (countdownBox) countdownBox.classList.add('hidden');
+
+            const productsContainer = document.getElementById('productsContainer');
+            if (productsContainer) productsContainer.classList.add('disabled-block');
+        };
+
+        const scheduleEndedPhase = () => {
+            const ms = saleEnd - Date.now();
+            if (ms <= 0) {
+                setEndedUi();
+                return;
+            }
+            this.salePhaseTimeout = setTimeout(() => {
+                this.salePhaseTimeout = null;
+                setEndedUi();
+            }, ms);
+        };
+
+        if (now >= saleEnd) {
+            setEndedUi();
+            return;
+        }
+
+        if (now >= saleStart) {
+            setActiveUi();
+            scheduleEndedPhase();
+            return;
+        }
+
+        setUpcomingUi();
+        this.startCountdown(saleStart, () => {
+            setActiveUi();
+            scheduleEndedPhase();
+        });
     }
 
     setSaleState(state) {
