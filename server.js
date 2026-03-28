@@ -91,6 +91,10 @@ app.post('/api/generate-link', async (req, res) => {
         } else if (data.data && Array.isArray(data.data) && data.data.length > 0) {
             const linkObj = data.data[0];
             affiliateLink = linkObj.short_link || linkObj.product_link || linkObj.url;
+        } else if (data.data && data.data.aff_short_url) {
+            affiliateLink = data.data.aff_short_url;
+        } else if (data.data && data.data.aff_url) {
+            affiliateLink = data.data.aff_url;
         } else if (data.data && data.data.short_link) {
             affiliateLink = data.data.short_link;
         } else if (data.data && data.data.product_link) {
