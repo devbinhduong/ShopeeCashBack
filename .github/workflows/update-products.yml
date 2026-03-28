@@ -2,10 +2,8 @@ name: Update Products Data
 
 on:
   schedule:
-    # Runs every hour at minute 0 (UTC). 
-    # Vietnam time (UTC+7): 00:00 UTC = 07:00 VN, 08:00 UTC = 15:00 VN, etc.
-    # Runs at: 01:00, 03:00, 08:00, 15:00 VN time (key flash sale hours)
-    - cron: '0 18,20,1,8 * * *'   # 01:00, 03:00, 08:00, 15:00 VN (18, 20, 1, 8 UTC)
+    # Runs every 30 minutes
+    - cron: '*/30 * * * *'
   workflow_dispatch: # Allow manual trigger from GitHub UI
 
 jobs:
