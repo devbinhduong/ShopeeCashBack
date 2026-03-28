@@ -204,10 +204,12 @@ class ProductScraper:
                     
                 # Skip converting if original_link is just the homepage or doesn't look like a real product
                 if not original_link or original_link == self.base_url or original_link == self.base_url.rstrip('/'):
+                    original_link = "No Link"
                     affiliate_link = "No Link"
                 else:    
-                    # Convert the original link to an affiliate link
-                    affiliate_link = self.convert_to_affiliate(original_link)
+                    # We will NOT convert it here to avoid API bottlenecks.
+                    # We will save the Original Link and let Node.js do it asynchronously.
+                    affiliate_link = "Pending"
 
                 scraped_data.append({
                     "Product Name": name,
@@ -216,6 +218,7 @@ class ProductScraper:
                     "Percent Badge": badge,
                     "Amount Info": amount,
                     "Image": image,
+                    "Original Link": original_link,
                     "Affiliate Link": affiliate_link,
                     "Scraping Time": scraping_time
                 })

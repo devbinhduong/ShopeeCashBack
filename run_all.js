@@ -41,89 +41,46 @@ async function runMasterIntegration() {
     
     let processedCount = 0;
 
-    // 3. Process the Links Array completely sequentially without modifying ANY other keys
+    // 3. Process the Links strictly from the product payload to prevent misalignment
     for (let i = 0; i < products.length; i++) {
         const product = products[i];
+        const targetLink = product["Original Link"];
         
-        let affiliateLink = "No Link";
+        let affiliateLink = targetLink || "No Link";
         
-        // If Python already mapped a link OR we have it mapped via short links arrays 
-        // (Assuming the user intends mapping order from short_links.json to the UI products)
-        let shortLinks = [];
-        try {
-            shortLinks = require('./short_links.json');
-        } catch(e) {}
-
-        const shortLink = shortLinks[i]; 
-        
-        // 4. Follow redirects if the index matches a provided shortlink
-        if (shortLink) {
-            console.log(`[${i + 1}/${products.length}] 🔗 Processing Shortlink: ${shortLink}`);
+        // Only convert valid links
+        if (targetLink && targetLink !== "No Link" && targetLink !== "Pending") {
+            console.log(`[${i + 1}/${products.length}] 🔗 Converting Link: ${targetLink}`);
             
             try {
-                // Expanding URL
-                const response = await fetch(shortLink, { 
-                    method: 'GET', 
-                    redirect: 'follow',
-                    headers 
-                });
-                const finalUrl = response.url;
-                
-                // Link Cleaning Structure
-                let cleanLink = finalUrl;
-                try {
-                    const regex1 = /-i\.(\d+)\.(\d+)/; 
-                    const regex2 = /\/product\/(\d+)\/(\d+)/;
-                    if (finalUrl.match(regex1)) {
-                        const [, shopId, itemId] = finalUrl.match(regex1);
-                        cleanLink = `https://shopee.vn/product/${shopId}/${itemId}`;
-                    } else if (finalUrl.match(regex2)) {
-                        const [, shopId, itemId] = finalUrl.match(regex2);
-                        cleanLink = `https://shopee.vn/product/${shopId}/${itemId}`;
-                    } else {
-                        const urlObj = new URL(finalUrl);
-                        cleanLink = urlObj.origin + urlObj.pathname;
-                    }
-                } catch (err) {}
-
-                // Affiliate Conversion
-                const apiEndpoint = 'https://api.accesstrade.vn/v1/product_link/create';
-                const atResponse = await fetch(apiEndpoint, {
+                // Hand off to our ultra-fast Vercel Backend that handles expansion & AT logic!
+                const apiEndpoint = 'https://shopee-cash-back.vercel.app/api/generate-link';
+                const response = await fetch(apiEndpoint, {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Token ${process.env.ACCESS_KEY}`
-                    },
-                    body: JSON.stringify({
-                        campaign_id: process.env.CAMPAIGN_ID,
-                        urls: [cleanLink]
-                    })
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ url: targetLink })
                 });
 
-                if (atResponse.ok) {
-                    const data = await atResponse.json();
-                    if (data.data && data.data.success_link && Array.isArray(data.data.success_link) && data.data.success_link.length > 0) {
-                        affiliateLink = data.data.success_link[0].short_link || data.data.success_link[0].aff_link || data.data.success_link[0].url;
-                    } else if (data.data && Array.isArray(data.data) && data.data.length > 0) {
-                        affiliateLink = data.data[0].short_link || data.data[0].product_link || data.data[0].url;
-                    } else if (data.short_link) affiliateLink = data.short_link;
-                    else if (data.product_link) affiliateLink = data.product_link;
-                    else if (data.url) affiliateLink = data.url;
-                    else if (Array.isArray(data) && data.length > 0) {
-                        affiliateLink = data[0].short_link || data[0].product_link || data[0].url;
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.link) {
+                        affiliateLink = data.link;
+                        processedCount++;
+                        console.log(`   ✅ Merged Affiliate Link: ${affiliateLink}`);
                     }
+                } else {
+                    const text = await response.text();
+                    console.error(`   ❌ Vercel API Error: ${text}`);
                 }
-                
-                processedCount++;
-                console.log(`   ✅ Merged Affiliate Link: ${affiliateLink}`);
             } catch (err) {
                 console.error(`   ❌ Failed processing shortlink: ${err.message}`);
             }
-            // Wait 300ms 
-            await new Promise(resolve => setTimeout(resolve, 300));
+            
+            // Wait 200ms to avoid AccessTrade rate limits
+            await new Promise(resolve => setTimeout(resolve, 200));
         } else {
-            console.log(`[${i + 1}/${products.length}] ➖ No Shortlink mapped for ${product["Product Name"]}, keeping existing fields.`);
-            affiliateLink = product["Affiliate Link"]; // Retain Python logic completely if none mapped
+            console.log(`[${i + 1}/${products.length}] ➖ Skip: No link to convert for ${product["Product Name"]}`);
+            affiliateLink = "No Link";
         }
 
         // Only explicitly overwrite the 'Affiliate Link' object string.
