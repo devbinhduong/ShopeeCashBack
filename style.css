@@ -388,8 +388,17 @@ button:disabled {
     color: var(--success);
     font-weight: 700;
 }
+.time-state.active {
+    color: #28a745;
+    animation: pulse-green 1.5s infinite;
+}
 .time-state.ended {
     color: #888;
+}
+
+@keyframes pulse-green {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
 }
 
 .countdown-box {

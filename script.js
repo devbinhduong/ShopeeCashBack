@@ -227,69 +227,95 @@ class ShopeeLinkGenerator {
         if (!timeStr || timeStr === "Unknown Time") return;
 
         const parts = timeStr.split('|').map(p => p.trim());
-        if (parts.length >= 3) {
+        if (parts.length >= 2) {
             const dateStr = parts[0]; // e.g., "28-03"
-            const frameStr = parts[1]; // e.g., "KHUNG: 02:00" or "Khung: 02:00"
-            const stateStr = parts[2]; // e.g., "Đã kết thúc" or "Đang diễn ra"
+            const frameStr = parts[1]; // e.g., "Khung: 15:00"
+            const stateStr = parts[2] || ''; // e.g., "Sắp diễn ra"
 
             const container = document.getElementById('timeStatusContainer');
             if (container) container.classList.remove('hidden');
 
             const dateEl = document.getElementById('timeDate');
             const frameEl = document.getElementById('timeFrame');
-            const stateEl = document.getElementById('timeState');
+            this.stateEl = document.getElementById('timeState');
 
             if (dateEl) dateEl.textContent = dateStr;
             if (frameEl) frameEl.textContent = frameStr;
-            if (stateEl) {
-                stateEl.textContent = stateStr;
-                if (stateStr.toLowerCase().includes('kết thúc')) {
-                    stateEl.classList.add('ended');
-                } else {
-                    stateEl.classList.remove('ended');
-                }
-            }
 
-            // Countdown logic if it's currently active or upcoming
-            const frameMatch = frameStr.match(/\d{1,2}:\d{2}/);
-            const isEnded = stateStr.toLowerCase().includes('kết thúc');
+            // Parse the frame time (e.g. "Khung: 15:00" → 15:00)
+            const frameMatch = frameStr.match(/(\d{1,2}):(\d{2})/);
+            if (!frameMatch) return;
+
+            const [, hh, mm] = frameMatch;
+            let targetDate = new Date();
+            targetDate.setHours(Number(hh), Number(mm), 0, 0);
+
             const isUpcoming = stateStr.toLowerCase().includes('sắp diễn ra');
-            const countdownLabel = document.getElementById('countdownLabel');
+            const isActive = stateStr.toLowerCase().includes('đang diễn ra');
+            const isEnded = stateStr.toLowerCase().includes('kết thúc');
 
-            if (frameMatch && !isEnded) {
-                // Determine target time
-                const timeOnly = frameMatch[0]; // "02:00"
-                const [hours, minutes] = timeOnly.split(':').map(Number);
-                
-                // Assuming the frame is today for simplicity; real logic might parse dateStr
-                let targetDate = new Date();
-                targetDate.setHours(hours, minutes, 0, 0);
-
-                if (isUpcoming) {
-                    if (countdownLabel) countdownLabel.textContent = "Bắt đầu sau: ";
-                    if (targetDate > new Date()) {
-                        this.startCountdown(targetDate);
-                    } else {
-                        // In case time already passed but status is still 'Sắp diễn ra'
-                        this.stopCountdown();
-                    }
-                } else {
-                    if (countdownLabel) countdownLabel.textContent = "Kết thúc sau: ";
-                    // If it is 'Đang diễn ra', assume it lasts for 2 hours from the frame start
-                    targetDate.setHours(targetDate.getHours() + 2);
-                    if (targetDate > new Date()) {
-                        this.startCountdown(targetDate);
-                    } else {
-                        this.stopCountdown();
-                    }
-                }
+            if (isEnded) {
+                this.setSaleState('ended');
+            } else if (isActive) {
+                this.setSaleState('active');
+                // Schedule end after 3 min from now (already started)
+                this.scheduleSaleEnd(3 * 60 * 1000);
+            } else if (isUpcoming && targetDate > new Date()) {
+                // Countdown to start time
+                this.setSaleState('upcoming');
+                this.startCountdown(targetDate, () => {
+                    // When countdown hits 0 → go active
+                    this.setSaleState('active');
+                    // After 3 minutes → end sale
+                    this.scheduleSaleEnd(3 * 60 * 1000);
+                });
             } else {
-                this.stopCountdown();
+                // Time already passed, default to ended
+                this.setSaleState('ended');
             }
         }
     }
 
-    startCountdown(targetDate) {
+    setSaleState(state) {
+        const stateEl = document.getElementById('timeState');
+        const countdownLabel = document.getElementById('countdownLabel');
+        const countdownBox = document.getElementById('countdownBox');
+        const dealsSection = document.querySelector('.scraped-deals-section');
+
+        if (state === 'upcoming') {
+            if (stateEl) { stateEl.textContent = 'Sắp diễn ra'; stateEl.className = 'time-state'; }
+            if (countdownLabel) countdownLabel.textContent = 'Bắt đầu sau:';
+            if (countdownBox) countdownBox.classList.remove('hidden');
+        } else if (state === 'active') {
+            if (stateEl) { stateEl.textContent = 'Đang diễn ra'; stateEl.className = 'time-state active'; }
+            if (countdownLabel) countdownLabel.textContent = 'Kết thúc sau:';
+            if (countdownBox) countdownBox.classList.remove('hidden');
+        } else if (state === 'ended') {
+            if (stateEl) { stateEl.textContent = 'Đã kết thúc'; stateEl.className = 'time-state ended'; }
+            if (countdownBox) countdownBox.classList.add('hidden');
+            // Hide entire products section
+            if (dealsSection) {
+                dealsSection.style.transition = 'opacity 0.8s ease';
+                dealsSection.style.opacity = '0';
+                setTimeout(() => { dealsSection.style.display = 'none'; }, 800);
+            }
+            this.stopCountdown();
+        }
+    }
+
+    scheduleSaleEnd(delayMs) {
+        if (this.saleEndTimeout) clearTimeout(this.saleEndTimeout);
+        // Countdown from delayMs
+        const endDate = new Date(Date.now() + delayMs);
+        this.startCountdown(endDate, () => {
+            this.setSaleState('ended');
+        });
+        this.saleEndTimeout = setTimeout(() => {
+            this.setSaleState('ended');
+        }, delayMs);
+    }
+
+    startCountdown(targetDate, onComplete) {
         const countdownBox = document.getElementById('countdownBox');
         const timerEl = document.getElementById('countdownTimer');
         
@@ -305,6 +331,7 @@ class ShopeeLinkGenerator {
             if (diff <= 0) {
                 this.stopCountdown();
                 timerEl.textContent = "00:00:00";
+                if (typeof onComplete === 'function') onComplete();
                 return;
             }
 

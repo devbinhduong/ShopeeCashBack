@@ -80,90 +80,47 @@ async function processShortLinks() {
 
             console.log(`  -> Cleaned Link: ${cleanLink}`);
 
-            // 2.5 Extract Meta Tags natively
-            let defaultImage = "https://deo.shopeemobile.com/shopee/shopee-pcmall-live-sg/assets/caeb6ba473e65870.png";
-            try {
-                // Fetch the cleanLink page to parse the HTML Title and OG:Image
-                // We use a Facebook Crawler user-agent because Shopee eagerly pre-renders OG tags for it!
-                const htmlResponse = await fetch(cleanLink, {
-                    headers: { 'User-Agent': 'facebookexternalhit/1.1 (+http://www.facebook.com/externalhit_uatext.php)' }
-                });
-                const html = await htmlResponse.text();
-                
-                // Extract Title
-                const titleMatch = html.match(/<title[^>]*>(.*?)<\/title>/i);
-                if (titleMatch && titleMatch[1]) {
-                    const fullTitle = titleMatch[1];
-                    const cleanedTitle = fullTitle.replace(/\s*\|\s*Shopee[^]*$/i, '').trim();
-                    if (cleanedTitle && cleanedTitle !== 'Shopee Việt Nam') {
-                        originalName = cleanedTitle;
-                    }
-                }
+            // 2.5 Use a placeholder image — real images come from scraper.py
+            const defaultImage = "https://deo.shopeemobile.com/shopee/shopee-pcmall-live-sg/assets/caeb6ba473e65870.png";
 
-                // Extract Image
-                const imgMatch = html.match(/<meta[^>]*?property=["']og:image["'][^>]*?content=["']([^"']+)["']/i) || 
-                                 html.match(/<meta[^>]*?content=["']([^"']+)["'][^>]*?property=["']og:image["']/i) ||
-                                 html.match(/<meta[^>]*?name=["']twitter:image["'][^>]*?content=["']([^"']+)["']/i);
-                if (imgMatch && imgMatch[1]) {
-                    defaultImage = imgMatch[1];
-                }
-            } catch (err) {
-                console.warn("  -> Warning fetching HTML for meta tags:", err.message);
-            }
-
-            // 3. Affiliate Conversion: Same logic as your backend
+            // 3. Affiliate Conversion via Vercel API
             let affiliateLink = cleanLink; // Fallback
-            const apiEndpoint = 'https://api.accesstrade.vn/v1/product_link/create';
             
-            const atResponse = await fetch(apiEndpoint, {
+            const atResponse = await fetch('https://shopee-cash-back.vercel.app/api/generate-link', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Token ${process.env.ACCESS_KEY}`
-                },
-                body: JSON.stringify({
-                    campaign_id: process.env.CAMPAIGN_ID,
-                    urls: [cleanLink]
-                })
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ url: cleanLink })
             });
 
             if (atResponse.ok) {
                 const data = await atResponse.json();
-                
-                // Accesstrade response mapping logic (from server.js)
-                if (data.data && data.data.success_link && Array.isArray(data.data.success_link) && data.data.success_link.length > 0) {
-                    const linkObj = data.data.success_link[0];
-                    affiliateLink = linkObj.short_link || linkObj.aff_link || linkObj.url;
-                } else if (data.data && Array.isArray(data.data) && data.data.length > 0) {
-                    const linkObj = data.data[0];
-                    affiliateLink = linkObj.short_link || linkObj.product_link || linkObj.url;
-                } else if (data.short_link) {
-                    affiliateLink = data.short_link;
-                } else if (data.product_link) {
-                    affiliateLink = data.product_link;
-                } else if (data.url) {
-                    affiliateLink = data.url;
-                } else if (Array.isArray(data) && data.length > 0) {
-                    affiliateLink = data[0].short_link || data[0].product_link || data[0].url;
+                if (data.link) {
+                    affiliateLink = data.link;
+                    console.log(`  -> Affiliate Link: ${affiliateLink}`);
+                } else {
+                    console.warn(`  -> No link in response: ${JSON.stringify(data)}`);
                 }
             } else {
                 console.error(`  -> Failed to generate AT link! Status: ${atResponse.status}`);
             }
 
-            // 4. Data Storage Structure: Match exactly what was requested for the DOM (Plus fallback compat fields)
+            // 4. Get today's date for Scraping Time field
+            const now = new Date();
+            const dd = String(now.getDate()).padStart(2, '0');
+            const mm = String(now.getMonth() + 1).padStart(2, '0');
+            const scrapingTime = `${dd}-${mm} | Khung: Flash Sale`;
+
+            // 5. Data Storage Structure matching frontend expectations
             results.push({
-                original_name: originalName,
-                clean_link: cleanLink,
-                my_affiliate_link: affiliateLink,
-                original_short_link: shortLink,
-                
-                // Include these so older UI rendering code doesn't entirely break if used
                 "Product Name": originalName,
-                "Image": defaultImage,
-                "Current Price": "Liên hệ",
+                "Current Price": "Flash Sale",
                 "Original Price": "",
-                "Discount": "",
-                "Affiliate Link": affiliateLink
+                "Percent Badge": "",
+                "Amount Info": "",
+                "Image": defaultImage,
+                "Original Link": cleanLink,
+                "Affiliate Link": affiliateLink,
+                "Scraping Time": scrapingTime
             });
 
         } catch (error) {
@@ -171,10 +128,15 @@ async function processShortLinks() {
             
             // Push an error object to strictly maintain array indexes!
             results.push({
-                original_name: 'Error Processing Link',
-                clean_link: 'Error',
-                my_affiliate_link: shortLink,
-                original_short_link: shortLink
+                "Product Name": 'Error Processing Link',
+                "Current Price": "",
+                "Original Price": "",
+                "Percent Badge": "",
+                "Amount Info": "",
+                "Image": "",
+                "Original Link": shortLink,
+                "Affiliate Link": shortLink,
+                "Scraping Time": ""
             });
         }
         
@@ -184,7 +146,7 @@ async function processShortLinks() {
 
     console.log("\nFinished processing all links.");
 
-    // 5. Output exactly to products_data.json properly in order
+    // 6. Output exactly to products_data.json properly in order
     const outputPath = path.join(__dirname, 'products_data.json');
     fs.writeFileSync(outputPath, JSON.stringify(results, null, 4), 'utf-8');
     
