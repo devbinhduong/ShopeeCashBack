@@ -77,7 +77,7 @@ async function runMasterIntegration() {
             "Image": item.img || '',
             "Original Link": shortLink || 'No Link',
             "Affiliate Link": "No Link",
-            "Scraping Time": item.time || ''
+            "Scraping Time": item.time ? `${item.time} | Sắp diễn ra` : ''
         };
 
         if (shortLink && shortLink !== 'No Link') {
