@@ -41,49 +41,81 @@ async function runMasterIntegration() {
     
     let processedCount = 0;
 
-    // 3. Process the Links strictly from the product payload to prevent misalignment
+    // 3. Process the Links strictly from short_links.json by array index
+    let shortLinks = [];
+    try {
+        shortLinks = JSON.parse(fs.readFileSync(path.join(__dirname, 'short_links.json'), 'utf8'));
+    } catch(e) {
+        console.warn("⚠️  Could not read short_links.json, products will have no affiliate links.");
+    }
+
+
     for (let i = 0; i < products.length; i++) {
         const product = products[i];
-        const targetLink = product["Original Link"];
-        
-        let affiliateLink = targetLink || "No Link";
-        
-        // Only convert valid links
-        if (targetLink && targetLink !== "No Link" && targetLink !== "Pending") {
-            console.log(`[${i + 1}/${products.length}] 🔗 Converting Link: ${targetLink}`);
-            
+        const shortLink = shortLinks[i];
+
+        let affiliateLink = "No Link";
+
+        if (shortLink) {
+            console.log(`[${i + 1}/${products.length}] 🔗 Processing: ${shortLink}`);
             try {
-                // Hand off to our ultra-fast Vercel Backend that handles expansion & AT logic!
-                const apiEndpoint = 'https://shopee-cash-back.vercel.app/api/generate-link';
-                const response = await fetch(apiEndpoint, {
+                // Step 1: Expand the short link to get the real Shopee product URL
+                const expandRes = await fetch(shortLink, {
+                    method: 'GET',
+                    redirect: 'follow',
+                    headers
+                });
+                const finalUrl = expandRes.url;
+
+                // Step 2: Clean the URL (extract shopId/itemId)
+                let cleanLink = finalUrl;
+                try {
+                    const regex1 = /-i\.(\d+)\.(\d+)/;
+                    const regex2 = /\/product\/(\d+)\/(\d+)/;
+                    if (finalUrl.match(regex1)) {
+                        const [, shopId, itemId] = finalUrl.match(regex1);
+                        cleanLink = `https://shopee.vn/product/${shopId}/${itemId}`;
+                    } else if (finalUrl.match(regex2)) {
+                        const [, shopId, itemId] = finalUrl.match(regex2);
+                        cleanLink = `https://shopee.vn/product/${shopId}/${itemId}`;
+                    } else {
+                        const urlObj = new URL(finalUrl);
+                        cleanLink = urlObj.origin + urlObj.pathname;
+                    }
+                } catch (err) {}
+
+                console.log(`   -> Clean: ${cleanLink}`);
+
+                // Step 3: Convert to AccessTrade affiliate link via Vercel API
+                const atRes = await fetch('https://shopee-cash-back.vercel.app/api/generate-link', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ url: targetLink })
+                    body: JSON.stringify({ url: cleanLink })
                 });
 
-                if (response.ok) {
-                    const data = await response.json();
+                if (atRes.ok) {
+                    const data = await atRes.json();
                     if (data.link) {
                         affiliateLink = data.link;
                         processedCount++;
-                        console.log(`   ✅ Merged Affiliate Link: ${affiliateLink}`);
+                        console.log(`   ✅ Affiliate Link: ${affiliateLink}`);
+                    } else {
+                        console.warn(`   ⚠️  No link in response: ${JSON.stringify(data)}`);
                     }
                 } else {
-                    const text = await response.text();
-                    console.error(`   ❌ Vercel API Error: ${text}`);
+                    const text = await atRes.text();
+                    console.error(`   ❌ API Error: ${text}`);
                 }
             } catch (err) {
-                console.error(`   ❌ Failed processing shortlink: ${err.message}`);
+                console.error(`   ❌ Failed: ${err.message}`);
             }
-            
-            // Wait 200ms to avoid AccessTrade rate limits
+
+            // Wait 200ms to avoid rate limits
             await new Promise(resolve => setTimeout(resolve, 200));
         } else {
-            console.log(`[${i + 1}/${products.length}] ➖ Skip: No link to convert for ${product["Product Name"]}`);
-            affiliateLink = "No Link";
+            console.log(`[${i + 1}/${products.length}] ➖ No short link for index ${i} (${product["Product Name"]?.substring(0, 40)})`);
         }
 
-        // Only explicitly overwrite the 'Affiliate Link' object string.
         products[i]["Affiliate Link"] = affiliateLink;
     }
 
