@@ -74,7 +74,7 @@ class ShopeeLinkGenerator {
     }
 
     async createAffiliateLink(url) {
-        const apiEndpoint = 'https://shopeecashback.onrender.com/api/generate-link';
+        const apiEndpoint = 'https://shopee-cash-back.vercel.app/api/generate-link';
         
         try {
             const response = await fetch(apiEndpoint, {
